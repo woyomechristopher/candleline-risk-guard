@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ArrowRight, CircleDollarSign, ShieldCheck, Wallet } from "lucide-react";
 
 import BotControls from "@/components/trading/BotControls";
@@ -8,7 +7,7 @@ import AppShell from "@/components/trading/AppShell";
 import MarketChart from "@/components/trading/MarketChart";
 import TradeHistory from "@/components/trading/TradeHistory";
 import { Button } from "@/components/ui/button";
-import { getUser } from "@/lib/auth";
+import { getUser, googleSignInEnabled } from "@/lib/auth";
 import { isBotOwner, loadDashboardData } from "@/lib/bot-service";
 
 export const metadata: Metadata = {
@@ -33,7 +32,29 @@ function formatPrice(value: number): string {
 
 export default async function Home() {
   const user = await getUser();
-  if (!user) redirect("/auth/start");
+  if (!user) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-background px-5 py-12">
+        <section className="w-full max-w-lg rounded-xl border border-border bg-card p-7 shadow-sm">
+          <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <ShieldCheck aria-hidden="true" size={22} />
+          </div>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Candleline · Binance.US</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Owner sign-in required</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            This trading workspace is limited to its designated owner. Sign in to review your strategy and trading activity.
+          </p>
+          {googleSignInEnabled ? (
+            <Button className="mt-5" nativeButton={false} render={<Link href="/auth/start" />}>
+              Continue with Google
+            </Button>
+          ) : (
+            <p className="mt-5 text-sm text-muted-foreground">Owner sign-in isn’t available right now.</p>
+          )}
+        </section>
+      </main>
+    );
+  }
 
   if (!process.env.BINANCE_BOT_OWNER_EMAIL || !isBotOwner(user.email)) {
     return (
