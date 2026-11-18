@@ -1,25 +1,32 @@
 <!-- Generated from .project/PROJECT.md by the engine — do not run `impeccable init`, which would interview a user who isn't here. Edit .project/PROJECT.md; this file is regenerated from it. -->
-# workspace
+# Candleline
 
 **Platform:** Responsive web — Next.js, React, Tailwind. shadcn/ui and lucide are installed and available; the direction decides whether they fit or whether this surface needs its own vocabulary.
 **Task mode:** Operate (pass as `--mode operate` to any script)
 
 ## What this is
 
-generate trading bot
+An owner-controlled Binance.US spot-trading dashboard with an automated moving-average strategy and explicit risk limits.
+
+## What it enables
+
+Let one account owner configure, monitor, pause, and review a real spot-trading bot without exposing exchange credentials in the app.
+
+## Primary user
+
+The owner of this workspace who trades eligible Binance.US spot markets.
+
+## What exists today
+
+Owner-only overview, strategy setup, and order history screens. - Binance.US market data and signed spot-market order integration. - Moving-average crossover signals, spend-per-buy limit, stop-loss, daily realized-loss stop, and a five-entry daily cap. - Saved strategy and order history, pending-order recovery, and a visible-session monitor. - Exchange credentials remain server-side; the app never sends withdrawals or uses leverage.
 
 ## Brand commitments & durable constraints
 
-- **The user is present and IS choosing the visual direction.** Offer six materially different grounded directions through the design-picker command and STOP; the answer arrives as your next input and the chosen direction is then pinned, exactly as if the user had named it. Do not build a direction before asking, do not narrow the six to a favourite, and do not ask about anything else in the same breath — this one decision is the whole card.
-- **Ask ONLY when the direction is genuinely open**: this project has no committed visual world yet, or the user asked to redesign the whole app. A later change inside a committed world inherits it — asking again there is an interruption, not a courtesy.
-- **The roll decides which six you show, never which one wins.** Order your grounded directions by resonance, then use the assignment to pick the spread you present, so the lineup is not your own top six. Showing your favourites is the failure this whole mechanism exists to prevent.
-- **All six options ARE dealt challengers — every one, and nothing else.** Do not put your own grounded directions on the card, do not invent a seventh world, and do not reword a challenger into something safer. Your derivation still matters: it is how you FUSE the world the user picks with this product. It just does not get to decide the menu.
-- **Deal THREE rolls, then show the six that can carry this product.** Run the concept-seed command three times and pool every challenger it deals (about eighteen worlds). Drop the ones that cannot hold this product's actual task — a world whose grammar has nowhere to put the main thing the user does here is out, however beautiful its board. Keep the six strongest of what survives.
-- **Fitness is the filter, never taste.** "Can this world's own grammar carry capture, or a list, or a form, or whatever this product mainly does?" is the question. "Would I have picked this?" is not, and a lineup of the six calmest worlds is the ranking rut wearing fitness as a disguise. A striking world that genuinely fuses beats a tame one every time.
-- **The six must span at least THREE different material families.** Paper, ink and stationery are ONE family. If your surviving six are all screens, or all paper, you filtered by familiarity rather than by fit — go back to the pool.
-- **Every option carries that challenger's QUALITY BAR *board* URL as `preview_image`, verbatim.** An option without one is dropped by the command, because the board is the only proof the world came from the roll. Six worlds, six boards. If the roll dealt fewer than six, show what it dealt.
-- **Never generate images for the card.** The catalog already ships the artwork, and rendering sketches would make the user sit and wait to answer a question about which world — not which composition.
-- **Also give every option a `swatch`** of the real colours you would build that world in, plus ONE plain sentence saying what this world does for THIS product — "a control-room rhythm for capturing thoughts fast" tells them something; listing the ground colour twice does not. The card already labels the board as a reference, so never spend the sentence saying that: "reference world, not a mockup" inside the description is wasted words on every card.
+Trading requires the owner’s Binance.US credentials and matching sign-in email. The monitor only checks markets while the Overview remains open; loss limits are not guarantees and displayed realized P&L excludes fees. Never present sample data or investment performance as real.
+
+- **This project already HAS a committed visual world — do NOT offer a design picker.** `.project/DESIGN_SYSTEM.md` records a direction someone decided on, and the code, tokens and components are built around it. Read it, inherit it, and make the requested change inside it. Dealing six alternative worlds here offers to throw away a working design system nobody asked you to replace.
+- **Tailoring is not redesigning.** "Make it about my business", new copy, a different logo, swapped imagery, a brand colour — all of that lands INSIDE the committed world. Change what was asked for and leave the direction alone.
+- **The one exception is an explicit, whole-app redesign** — the user asking for a different look outright, not merely a change that happens to be large. Then the direction is open again and the picker applies. When they name the new direction themselves, that is the decision: pin it and build, still without a picker.
 - Never run `impeccable serve-question`, with any flag (`--schema` included). It is disabled in this sandbox and always fails. Ask only through the design-picker command, and only when the instructions above say the user is choosing.
 - Design tooling is one launcher, `scripts/impeccable <verb>` in the skill folder (`build-phase status`, `concept-seed`, and so on). The `node …/scripts/*.mjs` files from older versions do not exist here; never run one.
 - The user's own words always outrank the roll. A direction, palette, face or reference they named is pinned; the roll only decides what they left open.
@@ -30,11 +37,15 @@ generate trading bot
 
 ## Positioning
 
-generate trading bot
+An owner-controlled Binance.US spot-trading dashboard with an automated moving-average strategy and explicit risk limits.
 
 ## Operating Context
 
 Responsive web, built unattended in one pass. Task mode: Operate.
+
+## Evidence on Hand
+
+Owner-only overview, strategy setup, and order history screens. - Binance.US market data and signed spot-market order integration. - Moving-average crossover signals, spend-per-buy limit, stop-loss, daily realized-loss stop, and a five-entry daily cap. - Saved strategy and order history, pending-order recovery, and a visible-session monitor. - Exchange credentials remain server-side; the app never sends withdrawals or uses leverage.
 
 ## Product Principles
 
