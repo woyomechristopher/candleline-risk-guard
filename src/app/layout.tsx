@@ -7,7 +7,15 @@ import "./globals.css";
 // hangs at compile and the preview renders blank. Use the zero-network stack in
 // globals.css, or self-host a .woff2 via next/font/local.
 export const metadata: Metadata = {
-  title: "App",
+  title: {
+    default: "Candleline — Binance.US trading bot",
+    template: "%s · Candleline",
+  },
+  description: "Owner-controlled Binance.US spot trading with transparent strategy limits and order history.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({

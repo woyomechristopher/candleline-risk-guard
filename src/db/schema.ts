@@ -16,6 +16,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  integer,
   index,
   pgTable,
   text,
@@ -100,21 +101,64 @@ export const userRelations = relations(user, ({ many }) => ({
 }));
 
 // ─── Your tables go below this line ───────────────────────────────────────────
-//
-// Example — delete it once you have real tables of your own:
-//
-// export const note = pgTable(
-//   "note",
-//   {
-//     id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-//     userId: text("user_id")
-//       .notNull()
-//       .references(() => user.id, { onDelete: "cascade" }),
-//     title: text("title").notNull(),
-//     body: text("body").notNull().default(""),
-//     createdAt: timestamp("created_at").notNull().defaultNow(),
-//   },
-//   // Index the column you filter by. Every query for a user's own rows filters
-//   // on user_id, and without this each one is a full table scan.
-//   (t) => [index("note_user_idx").on(t.userId)],
-// );
+
+export const tradingBot = pgTable(
+  "trading_bot",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(false),
+    symbol: text("symbol").notNull().default(""),
+    interval: text("interval").notNull().default("15m"),
+    fastPeriod: integer("fast_period").notNull().default(9),
+    slowPeriod: integer("slow_period").notNull().default(21),
+    quoteOrderAmount: text("quote_order_amount").notNull().default(""),
+    maxDailyLoss: text("max_daily_loss").notNull().default(""),
+    stopLossPercent: text("stop_loss_percent").notNull().default(""),
+    currentPositionQty: text("current_position_qty").notNull().default("0"),
+    currentPositionCost: text("current_position_cost").notNull().default("0"),
+    dailyRealizedPnl: text("daily_realized_pnl").notNull().default("0"),
+    dailyTradeCount: integer("daily_trade_count").notNull().default(0),
+    dailyDayKey: text("daily_day_key").notNull().default(""),
+    lastProcessedCandle: text("last_processed_candle"),
+    lastHeartbeatAt: timestamp("last_heartbeat_at"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("trading_bot_user_idx").on(t.userId),
+    index("trading_bot_enabled_idx").on(t.enabled),
+  ],
+);
+
+export const tradeEvent = pgTable(
+  "trade_event",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    botId: text("bot_id")
+      .notNull()
+      .references(() => tradingBot.id, { onDelete: "cascade" }),
+    clientOrderId: text("client_order_id").notNull(),
+    exchangeOrderId: text("exchange_order_id"),
+    symbol: text("symbol").notNull(),
+    side: text("side").notNull(),
+    signal: text("signal").notNull(),
+    status: text("status").notNull(),
+    price: text("price").notNull().default("0"),
+    quantity: text("quantity").notNull().default("0"),
+    quoteAmount: text("quote_amount").notNull().default("0"),
+    realizedPnl: text("realized_pnl"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("trade_event_client_order_idx").on(t.clientOrderId),
+    index("trade_event_user_created_idx").on(t.userId, t.createdAt),
+    index("trade_event_bot_created_idx").on(t.botId, t.createdAt),
+  ],
+);
