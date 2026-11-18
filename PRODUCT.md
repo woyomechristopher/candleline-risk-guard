@@ -18,7 +18,7 @@ The owner of this workspace who trades eligible Binance.US spot markets.
 
 ## What exists today
 
-Owner-only overview, strategy setup, and order history screens. - Binance.US market data and signed spot-market order integration. - Moving-average crossover signals, spend-per-buy limit, stop-loss, daily realized-loss stop, and a five-entry daily cap. - Saved strategy and order history, pending-order recovery, and a visible-session monitor. - Exchange credentials remain server-side; the app never sends withdrawals or uses leverage.
+Owner-only overview, strategy setup, and order history screens. - Binance.US market data and signed spot-market order integration. - Moving-average crossover signals, per-buy and total-position spend caps, stop-loss checks, a daily realized-loss limit, and a five-entry daily cap. - New buys are blocked when the estimated stop-loss risk would exceed the remaining daily loss budget; stop-loss and daily-loss exits are still market orders and cannot guarantee an exact loss ceiling. - Saved strategy and order history, pending-order recovery, and a visible-session monitor. - Exchange credentials remain server-side; the app never sends withdrawals or uses leverage.
 
 ## Brand commitments & durable constraints
 
@@ -45,7 +45,7 @@ Responsive web, built unattended in one pass. Task mode: Operate.
 
 ## Evidence on Hand
 
-Owner-only overview, strategy setup, and order history screens. - Binance.US market data and signed spot-market order integration. - Moving-average crossover signals, spend-per-buy limit, stop-loss, daily realized-loss stop, and a five-entry daily cap. - Saved strategy and order history, pending-order recovery, and a visible-session monitor. - Exchange credentials remain server-side; the app never sends withdrawals or uses leverage.
+Owner-only overview, strategy setup, and order history screens. - Binance.US market data and signed spot-market order integration. - Moving-average crossover signals, per-buy and total-position spend caps, stop-loss checks, a daily realized-loss limit, and a five-entry daily cap. - New buys are blocked when the estimated stop-loss risk would exceed the remaining daily loss budget; stop-loss and daily-loss exits are still market orders and cannot guarantee an exact loss ceiling. - Saved strategy and order history, pending-order recovery, and a visible-session monitor. - Exchange credentials remain server-side; the app never sends withdrawals or uses leverage.
 
 ## Product Principles
 
