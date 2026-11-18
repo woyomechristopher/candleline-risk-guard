@@ -35,6 +35,7 @@ function toBotSettings(bot: typeof tradingBot.$inferSelect): BotSettings {
     fastPeriod: bot.fastPeriod,
     slowPeriod: bot.slowPeriod,
     quoteOrderAmount: bot.quoteOrderAmount,
+    maxPositionSize: bot.maxPositionSize,
     maxDailyLoss: bot.maxDailyLoss,
     stopLossPercent: bot.stopLossPercent,
     currentPositionQty: bot.currentPositionQty,
@@ -145,6 +146,7 @@ export async function saveSettings(userId: string, settings: {
   fastPeriod: number;
   slowPeriod: number;
   quoteOrderAmount: string;
+  maxPositionSize: string;
   maxDailyLoss: string;
   stopLossPercent: string;
 }) {

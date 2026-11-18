@@ -115,6 +115,7 @@ export const tradingBot = pgTable(
     fastPeriod: integer("fast_period").notNull().default(9),
     slowPeriod: integer("slow_period").notNull().default(21),
     quoteOrderAmount: text("quote_order_amount").notNull().default(""),
+    maxPositionSize: text("max_position_size").notNull().default(""),
     maxDailyLoss: text("max_daily_loss").notNull().default(""),
     stopLossPercent: text("stop_loss_percent").notNull().default(""),
     currentPositionQty: text("current_position_qty").notNull().default("0"),

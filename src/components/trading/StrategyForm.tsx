@@ -23,6 +23,7 @@ export default function StrategyForm({ bot, hasOpenPosition }: StrategyFormProps
   const [fastPeriod, setFastPeriod] = useState(String(bot.fastPeriod));
   const [slowPeriod, setSlowPeriod] = useState(String(bot.slowPeriod));
   const [quoteOrderAmount, setQuoteOrderAmount] = useState(bot.quoteOrderAmount);
+  const [maxPositionSize, setMaxPositionSize] = useState(bot.maxPositionSize);
   const [maxDailyLoss, setMaxDailyLoss] = useState(bot.maxDailyLoss);
   const [stopLossPercent, setStopLossPercent] = useState(bot.stopLossPercent);
   const [pending, setPending] = useState(false);
@@ -40,6 +41,7 @@ export default function StrategyForm({ bot, hasOpenPosition }: StrategyFormProps
       fastPeriod,
       slowPeriod,
       quoteOrderAmount,
+      maxPositionSize,
       maxDailyLoss,
       stopLossPercent,
     });
@@ -100,14 +102,19 @@ export default function StrategyForm({ bot, hasOpenPosition }: StrategyFormProps
         <div className="mb-5 border-b border-border pb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Risk limits</p>
           <h2 className="mt-1 text-lg font-semibold tracking-tight">Keep each trade bounded</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Limits are required before the bot can start. A market can move through a stop before an order fills.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Every buy is checked against your position cap and remaining daily risk budget. A market can move through a stop before a sell fills.</p>
         </div>
 
-        <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="quote-order-amount">Maximum spend per buy</Label>
             <Input id="quote-order-amount" min="0" onChange={(event) => setQuoteOrderAmount(event.target.value)} placeholder="Set your own amount" step="any" type="number" value={quoteOrderAmount} />
             <p className="text-xs text-muted-foreground">Uses the market’s quote currency and never exceeds your free balance.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="max-position-size">Maximum total position size</Label>
+            <Input id="max-position-size" min="0" onChange={(event) => setMaxPositionSize(event.target.value)} placeholder="Set your own amount" step="any" type="number" value={maxPositionSize} />
+            <p className="text-xs text-muted-foreground">Caps the total quote-currency amount invested in the open position.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="max-daily-loss">Daily realized-loss limit</Label>

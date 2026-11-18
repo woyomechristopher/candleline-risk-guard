@@ -30,6 +30,7 @@ interface SettingsInput {
   fastPeriod: number;
   slowPeriod: number;
   quoteOrderAmount: string;
+  maxPositionSize: string;
   maxDailyLoss: string;
   stopLossPercent: string;
 }
@@ -57,6 +58,7 @@ function readSettings(input: unknown): SettingsInput {
   const fastPeriod = Number(input.fastPeriod);
   const slowPeriod = Number(input.slowPeriod);
   const quoteOrderAmount = typeof input.quoteOrderAmount === "string" ? input.quoteOrderAmount.trim() : "";
+  const maxPositionSize = typeof input.maxPositionSize === "string" ? input.maxPositionSize.trim() : "";
   const maxDailyLoss = typeof input.maxDailyLoss === "string" ? input.maxDailyLoss.trim() : "";
   const stopLossPercent = typeof input.stopLossPercent === "string" ? input.stopLossPercent.trim() : "";
 
@@ -70,10 +72,14 @@ function readSettings(input: unknown): SettingsInput {
     throw new UserFacingError("The fast period must be 2 or higher and smaller than the slow period, which can be up to 200.");
   }
   const amount = Number(quoteOrderAmount);
+  const positionSize = Number(maxPositionSize);
   const lossCap = Number(maxDailyLoss);
   const stopLoss = Number(stopLossPercent);
   if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000) {
     throw new UserFacingError("Enter a positive maximum spend for each buy.");
+  }
+  if (!Number.isFinite(positionSize) || positionSize <= 0 || positionSize > 1_000_000) {
+    throw new UserFacingError("Enter a positive maximum total position size.");
   }
   if (!Number.isFinite(lossCap) || lossCap <= 0 || lossCap > 1_000_000) {
     throw new UserFacingError("Enter a positive daily loss limit.");
@@ -81,7 +87,10 @@ function readSettings(input: unknown): SettingsInput {
   if (!Number.isFinite(stopLoss) || stopLoss <= 0 || stopLoss > 100) {
     throw new UserFacingError("Enter a stop-loss percentage greater than zero and no more than 100.");
   }
-  return { symbol, interval: interval as TradingInterval, fastPeriod, slowPeriod, quoteOrderAmount, maxDailyLoss, stopLossPercent };
+  if (positionSize * stopLoss / 100 > lossCap) {
+    throw new UserFacingError("The maximum position’s planned stop-loss must fit within the daily loss limit.");
+  }
+  return { symbol, interval: interval as TradingInterval, fastPeriod, slowPeriod, quoteOrderAmount, maxPositionSize, maxDailyLoss, stopLossPercent };
 }
 
 function currentUtcDay(): string {
@@ -241,20 +250,35 @@ async function reconcilePendingOrder(bot: typeof tradingBot.$inferSelect) {
 }
 
 async function executeSignal(
-  bot: typeof tradingBot.$inferSelect,
+  requestedBot: typeof tradingBot.$inferSelect,
   side: "BUY" | "SELL",
   signal: string,
   candleTime: number,
   currentPrice: number,
 ) {
-  const rules = await getSymbolRules(bot.symbol);
+  const rules = await getSymbolRules(requestedBot.symbol);
   if (!rules || rules.status !== "TRADING") {
-    await setBotEnabled(bot.userId, false, "This market is not currently available for spot trading.");
+    await setBotEnabled(requestedBot.userId, false, "This market is not currently available for spot trading.");
     return "This market is not currently available; the bot is paused.";
   }
   if (side === "BUY" && !rules.quoteOrderQtyMarketAllowed) {
-    await setBotEnabled(bot.userId, false, "This market does not support a spend-capped market buy.");
+    await setBotEnabled(requestedBot.userId, false, "This market does not support a spend-capped market buy.");
     return "This market does not support a spend-capped buy; the bot is paused.";
+  }
+
+  const account = side === "BUY" ? await getAccount() : null;
+  const bot = await getBotRow(requestedBot.userId);
+  if (bot.id !== requestedBot.id) {
+    await setBotEnabled(requestedBot.userId, false, "The saved strategy changed during this market check.");
+    return "The saved strategy changed; trading is paused for review.";
+  }
+
+  const [pendingOrder] = await db.select({ id: tradeEvent.id }).from(tradeEvent)
+    .where(and(eq(tradeEvent.botId, bot.id), eq(tradeEvent.status, "PENDING")))
+    .limit(1);
+  if (pendingOrder) {
+    await setBotEnabled(bot.userId, false, "A previous order is still awaiting confirmation.");
+    return "A previous order is still being reviewed; trading is paused.";
   }
 
   const clientOrderId = makeClientOrderId(bot.id, candleTime, side);
@@ -262,22 +286,62 @@ async function executeSignal(
   let orderQuote = "0";
 
   if (side === "BUY") {
-    const account = await getAccount();
-    if (!account.canTrade) {
+    if (!account?.canTrade) {
       await setBotEnabled(bot.userId, false, "Spot trading permission is not enabled for this exchange key.");
       return "Spot trading permission is not enabled; the bot is paused.";
     }
-    const available = Number(account.balances.find((balance) => balance.asset === rules.quoteAsset)?.free ?? "0");
-    const requestedAmount = Number(bot.quoteOrderAmount);
+    const settings = readSettings(bot);
+    const currentPositionCost = Number(bot.currentPositionCost);
+    const positionQty = Number(bot.currentPositionQty);
+    const currentDayPnl = bot.dailyDayKey === currentUtcDay() ? Number(bot.dailyRealizedPnl) : 0;
+    const maxDailyLoss = Number(settings.maxDailyLoss);
+    const maxPositionSize = Number(settings.maxPositionSize);
+    if (
+      !Number.isFinite(currentPositionCost) ||
+      currentPositionCost < 0 ||
+      !Number.isFinite(positionQty) ||
+      positionQty < 0 ||
+      (positionQty > 0 && currentPositionCost <= 0) ||
+      !Number.isFinite(currentDayPnl)
+    ) {
+      await setBotEnabled(bot.userId, false, "Saved risk totals could not be verified.");
+      return "Saved risk totals could not be verified; the bot is paused.";
+    }
+    if (currentDayPnl <= -maxDailyLoss) {
+      await setBotEnabled(bot.userId, false, "The daily realized-loss limit was reached.");
+      return "The daily loss limit was reached; this buy was blocked and the bot is paused.";
+    }
+
+    const remainingPositionSize = Math.max(0, maxPositionSize - currentPositionCost);
+    const spendBeforePrecision = Math.min(Number(settings.quoteOrderAmount), remainingPositionSize);
+    const requestedAmount = Math.floor(spendBeforePrecision * 100_000_000) / 100_000_000;
+    const projectedStopLoss = (currentPositionCost + requestedAmount) * Number(settings.stopLossPercent) / 100;
+    const remainingDailyLoss = maxDailyLoss + currentDayPnl;
+    if (requestedAmount <= 0 || currentPositionCost + requestedAmount > maxPositionSize + 1e-8) {
+      await setBotEnabled(bot.userId, false, "The configured maximum position size has been reached.");
+      return "The position-size limit blocks this buy; the bot is paused.";
+    }
+    if (projectedStopLoss > remainingDailyLoss + 1e-8) {
+      await setBotEnabled(bot.userId, false, "The planned stop-loss risk exceeds the remaining daily loss limit.");
+      return "This buy would exceed the remaining daily risk limit; the bot is paused.";
+    }
+    const averageEntry = positionQty > 0 ? currentPositionCost / positionQty : 0;
+    const stopPrice = averageEntry * (1 - Number(settings.stopLossPercent) / 100);
+    if (positionQty > 0 && currentPrice > 0 && currentPrice <= stopPrice) {
+      await setBotEnabled(bot.userId, false, "The stop-loss level was reached before this buy.");
+      return "The stop-loss level blocks this buy; the bot is paused for review.";
+    }
+
     if (rules.minNotional > 0 && requestedAmount < rules.minNotional) {
       await setBotEnabled(bot.userId, false, "The buy limit is below this market’s minimum order size.");
       return "The buy limit is below this market’s minimum; the bot is paused.";
     }
+    const available = Number(account.balances.find((balance) => balance.asset === rules.quoteAsset)?.free ?? "0");
     if (!Number.isFinite(available) || requestedAmount > available * 0.995) {
       await setBotEnabled(bot.userId, false, `There is not enough available ${rules.quoteAsset} balance for the configured buy limit.`);
       return `There is not enough available ${rules.quoteAsset} balance; the bot is paused.`;
     }
-    orderQuote = bot.quoteOrderAmount;
+    orderQuote = requestedAmount.toFixed(8).replace(/\.?0+$/, "");
   } else {
     const quantity = floorToStep(Number(bot.currentPositionQty), rules.quantityStep);
     if (!Number.isFinite(Number(quantity)) || Number(quantity) <= 0) {
@@ -363,11 +427,12 @@ export async function startBot(): Promise<ActionResult> {
     if (!rules || rules.status !== "TRADING") throw new UserFacingError("This market is not currently available for spot trading.");
     if (!rules.quoteOrderQtyMarketAllowed) throw new UserFacingError("This market does not support a spend-capped market buy. Choose a different market.");
     if (!account.canTrade) throw new UserFacingError("Spot trading permission is not enabled for this exchange key.");
-    if (rules.minNotional > 0 && Number(settings.quoteOrderAmount) < rules.minNotional) {
+    const maximumEntryAmount = Math.min(Number(settings.quoteOrderAmount), Number(settings.maxPositionSize));
+    if (rules.minNotional > 0 && maximumEntryAmount < rules.minNotional) {
       throw new UserFacingError(`The buy limit must be at least ${rules.minNotional} ${rules.quoteAsset} for this market.`);
     }
     const available = Number(account.balances.find((balance) => balance.asset === rules.quoteAsset)?.free ?? "0");
-    if (Number(settings.quoteOrderAmount) > available * 0.995) {
+    if (maximumEntryAmount > available * 0.995) {
       throw new UserFacingError(`Your available ${rules.quoteAsset} balance is below the configured buy limit.`);
     }
     if (bot.dailyDayKey === currentUtcDay() && Number(bot.dailyRealizedPnl) <= -Number(settings.maxDailyLoss)) {
@@ -470,6 +535,7 @@ export async function runBotTick(): Promise<ActionResult> {
       return { ok: false, message: pendingMessage };
     }
     if (!bot.enabled) return { ok: true, message: "Bot is paused." };
+    const settings = readSettings(bot);
     if (!hasBinanceCredentials()) {
       await setBotEnabled(user.id, false, "Secure Binance.US access is not connected.");
       return { ok: false, message: "Secure Binance.US access is not connected; the bot is paused." };
@@ -491,11 +557,11 @@ export async function runBotTick(): Promise<ActionResult> {
 
     const dayKey = currentUtcDay();
     const currentPnl = bot.dailyDayKey === dayKey ? Number(bot.dailyRealizedPnl) : 0;
-    const maxLoss = Number(bot.maxDailyLoss);
+    const maxLoss = Number(settings.maxDailyLoss);
     const positionQty = Number(bot.currentPositionQty);
     const avgEntry = positionQty > 0 ? Number(bot.currentPositionCost) / positionQty : 0;
     const closes = closedCandles.map((candle) => candle.close);
-    let signal = crossoverSignal(closes, bot.fastPeriod, bot.slowPeriod);
+    let signal = crossoverSignal(closes, settings.fastPeriod, settings.slowPeriod);
     let reason = signal === "BUY" ? "Fast average crossed above slow average" : "Fast average crossed below slow average";
 
     if (currentPnl <= -maxLoss) {
@@ -508,7 +574,7 @@ export async function runBotTick(): Promise<ActionResult> {
         revalidatePath("/");
         return { ok: false, message: "The daily loss limit was reached; the bot is paused." };
       }
-    } else if (positionQty > 0 && avgEntry > 0 && latest.close <= avgEntry * (1 - Number(bot.stopLossPercent) / 100)) {
+    } else if (positionQty > 0 && avgEntry > 0 && latest.close <= avgEntry * (1 - Number(settings.stopLossPercent) / 100)) {
       signal = "SELL";
       reason = "Configured stop-loss reached";
     } else if (positionQty > 0 && signal === "BUY") {

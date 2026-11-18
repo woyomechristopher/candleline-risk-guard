@@ -13,6 +13,7 @@ export interface BotSettings {
   fastPeriod: number;
   slowPeriod: number;
   quoteOrderAmount: string;
+  maxPositionSize: string;
   maxDailyLoss: string;
   stopLossPercent: string;
   currentPositionQty: string;
